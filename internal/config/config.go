@@ -19,15 +19,18 @@ type Config struct {
 
 func Load() *Config {
 	if err := godotenv.Load(); err != nil {
-		log.Println("env file not found, using system enviroment")
+		log.Println("No .env file found in current directory, trying parent...")
+		if err := godotenv.Load("../.env"); err != nil {
+			log.Println("No .env file found, using system environment")
+		}
 	}
 
 	cfg := &Config{
-		DBHost:     getEnv("DB_HOST", "localhost"),
-		DBPort:     getEnv("DB_PORT", "5432"),
-		DBUser:     getEnv("DB_USER", "postgres"),
-		DBPass:     getEnv("DB_PASS", "postgres"),
-		DBName:     getEnv("DB_NAME", "subscriptions"),
+		DBHost:     MustGetEnv("DB_HOST"),
+		DBPort:     MustGetEnv("DB_PORT"),
+		DBUser:     MustGetEnv("DB_USER"),
+		DBPass:     MustGetEnv("DB_PASS"),
+		DBName:     MustGetEnv("DB_NAME"),
 		ServerPort: getEnv("SERVER_PORT", "8080"),
 	}
 
@@ -45,18 +48,17 @@ func (c *Config) DBConnString() string {
 	)
 }
 
-func MusGetEnv(key, value string) string {
+func MustGetEnv(key string) string {
 	val, ok := os.LookupEnv(key)
 	if !ok || val == "" {
-		log.Fatalf("Required enviroment variable %s is not set", key)
+		log.Fatalf("Required environment variable %s is not set", key)
 	}
-
 	return val
 }
 
-func getEnv(key, value string) string {
-	if val, ok := os.LookupEnv(key); ok {
+func getEnv(key, defaultValue string) string {
+	if val, ok := os.LookupEnv(key); ok && val != "" {
 		return val
 	}
-	return value
+	return defaultValue
 }
