@@ -1,14 +1,10 @@
 name: go-pipeline
-on:
-  push:
-    branches:
-      - main
-    tags:
-      - 'v*'
+on: push
 
 jobs:
-  test: 
+  test:
     runs-on: ubuntu-latest
+
     services:
       postgres:
         image: postgres:alpine
@@ -19,29 +15,43 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U postgres -d subscription_test"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    container: golang:1.25
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     env:
-      DB_HOST: 127.0.0.1
+      DB_HOST: localhost
       DB_PORT: 5432
       DB_USER: postgres
       DB_PASS: postgres
       DB_NAME: subscription_test
       SERVER_PORT: 8080
       APP_ENV: test
+
     steps:
-      - uses: actions/checkout@v6.0.1
+      - uses: actions/checkout@v4
+
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
 
       - name: Download dependencies
         run: go mod download
 
-      - name: Run unit tests (repository + handler)
+      - name: Wait for postgres
         run: |
-          go test -v ./internal/repository
-          go test -v ./internal/handler
+          until pg_isready -h localhost -p 5432 -U postgres; do
+            sleep 1
+          done
+
+      - name: Run migrations
+        run: |
+          psql postgresql://postgres:postgres@localhost:5432/subscription_test -f migrations/create_subscriptions.sql
+
+      - name: Run tests
+        run: go test -v ./...
 
       - name: Vet
         run: go vet ./...
@@ -61,7 +71,7 @@ jobs:
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with: 
-          username: ${{ secrets.CD_DOCHUB_ID}}
+          username: ${{ secrets.CD_DOCHUB_ID }}
           password: ${{ secrets.CD_DOCHUB_TOKEN }}
 
       - name: Extract metadata (tags, labels) for Docker
