@@ -28,7 +28,6 @@ func NewSubscriptionRepo(db *sql.DB) SubscriptionRepository {
 	return &subscriptionRepo{db: db}
 }
 
-// parseDate конвертирует строку формата "YYYY-MM-DD" в time.Time
 func parseDate(dateStr string) (time.Time, error) {
 	return time.Parse("2006-01-02", dateStr)
 }
