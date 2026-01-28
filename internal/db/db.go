@@ -2,14 +2,16 @@ package db
 
 import (
 	"database/sql"
-	"log"
 
 	_ "github.com/lib/pq"
 
 	"github.com/Elmar006/subscription_service/internal/config"
+	"github.com/Elmar006/subscription_service/logger"
 )
 
 func Connect(cfg *config.Config) *sql.DB {
+	logger.Init()
+	log := logger.L()
 	db, err := sql.Open("postgres", cfg.DBConnString())
 	if err != nil {
 		log.Fatalf("Failed to open DB connection: %v", err)
@@ -18,6 +20,6 @@ func Connect(cfg *config.Config) *sql.DB {
 		log.Fatalf("Failed to ping DB: %v", err)
 	}
 
-	log.Println("Connected to PostgreSql successfully")
+	log.Info("Connected to PostgreSql successfully")
 	return db
 }
