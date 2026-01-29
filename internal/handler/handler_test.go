@@ -14,6 +14,7 @@ import (
 	"github.com/Elmar006/subscription_service/internal/model"
 	"github.com/Elmar006/subscription_service/internal/repository"
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 )
 
 func setupHandler(t *testing.T) (*SubscriptionHandler, *model.Subscription, repository.SubscriptionRepository) {
@@ -28,15 +29,19 @@ func setupHandler(t *testing.T) (*SubscriptionHandler, *model.Subscription, repo
 	repo := repository.NewSubscriptionRepo(database)
 	h := NewSubscriptionHandler(repo)
 
+	userID := uuid.New().String()
+
 	sub := &model.Subscription{
 		ServiceName: "Test Service",
 		Price:       888,
-		UserID:      "user-123",
+		UserID:      userID,
 		StartDate:   "2026-01-01",
 		EndDate:     "2026-01-31",
 		CreatedAt:   time.Now(),
 	}
-	repo.Create(sub)
+	if err := repo.Create(sub); err != nil {
+		t.Fatalf("Failed to create subscription: %v", err)
+	}
 
 	return h, sub, repo
 }
@@ -47,7 +52,7 @@ func TestCreateSub(t *testing.T) {
 	body := map[string]interface{}{
 		"service_name": "Music Plus",
 		"price":        500,
-		"user_id":      "user-456",
+		"user_id":      uuid.New().String(),
 		"start_date":   "2026-02-01",
 	}
 
