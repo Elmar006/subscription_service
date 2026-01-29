@@ -6,13 +6,20 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
+	_ "github.com/Elmar006/subscription_service/docs"
 	"github.com/Elmar006/subscription_service/internal/config"
 	"github.com/Elmar006/subscription_service/internal/db"
 	"github.com/Elmar006/subscription_service/internal/handler"
 	"github.com/Elmar006/subscription_service/internal/repository"
 	"github.com/Elmar006/subscription_service/logger"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
+// @title Subscription Service API
+// @version 1.0
+// @description API for managing subscriptions
+// @host localhost:8080
+// @BasePath /
 func main() {
 	cfg := config.Load()
 	logger.Init()
@@ -27,7 +34,7 @@ func main() {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-
+	r.Get("/swagger/*", httpSwagger.WrapHandler)
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("OK"))
 	})

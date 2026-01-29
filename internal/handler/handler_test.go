@@ -14,7 +14,6 @@ import (
 	"github.com/Elmar006/subscription_service/internal/model"
 	"github.com/Elmar006/subscription_service/internal/repository"
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 )
 
 func setupHandler(t *testing.T) (*SubscriptionHandler, *model.Subscription, repository.SubscriptionRepository) {
@@ -32,7 +31,7 @@ func setupHandler(t *testing.T) (*SubscriptionHandler, *model.Subscription, repo
 	sub := &model.Subscription{
 		ServiceName: "Test Service",
 		Price:       888,
-		UserID:      uuid.New(),
+		UserID:      "user-123",
 		StartDate:   "2026-01-01",
 		EndDate:     "2026-01-31",
 		CreatedAt:   time.Now(),
@@ -48,7 +47,7 @@ func TestCreateSub(t *testing.T) {
 	body := map[string]interface{}{
 		"service_name": "Music Plus",
 		"price":        500,
-		"user_id":      uuid.New().String(),
+		"user_id":      "user-456",
 		"start_date":   "2026-02-01",
 	}
 
@@ -69,16 +68,19 @@ func TestCreateSub(t *testing.T) {
 	if sub.ServiceName != "Music Plus" || sub.Price != 500 {
 		t.Errorf("Response mismatch, got %v", sub)
 	}
+	if sub.ID == "" {
+		t.Errorf("Expected generated ID, got empty")
+	}
 }
 
 func TestGetByIDSub(t *testing.T) {
 	h, sub, _ := setupHandler(t)
 
-	req := httptest.NewRequest(http.MethodGet, "/subscriptions/"+sub.ID.String(), nil)
+	req := httptest.NewRequest(http.MethodGet, "/subscriptions/"+sub.ID, nil)
 	w := httptest.NewRecorder()
 
 	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("id", sub.ID.String())
+	rctx.URLParams.Add("id", sub.ID)
 	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
 	req = req.WithContext(ctx)
 
@@ -99,7 +101,7 @@ func TestGetByIDSub(t *testing.T) {
 func TestListByUser(t *testing.T) {
 	h, sub, _ := setupHandler(t)
 
-	req := httptest.NewRequest(http.MethodGet, "/subscriptions?user_id="+sub.UserID.String(), nil)
+	req := httptest.NewRequest(http.MethodGet, "/subscriptions?user_id="+sub.UserID, nil)
 	w := httptest.NewRecorder()
 
 	h.GetSubscription(w, req)
@@ -126,11 +128,11 @@ func TestUpdateSubscription(t *testing.T) {
 		"price":        999,
 	}
 	data, _ := json.Marshal(update)
-	req := httptest.NewRequest(http.MethodPut, "/subscriptions/"+sub.ID.String(), bytes.NewReader(data))
+	req := httptest.NewRequest(http.MethodPut, "/subscriptions/"+sub.ID, bytes.NewReader(data))
 	w := httptest.NewRecorder()
 
 	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("id", sub.ID.String())
+	rctx.URLParams.Add("id", sub.ID)
 	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
 	req = req.WithContext(ctx)
 
@@ -153,11 +155,11 @@ func TestUpdateSubscription(t *testing.T) {
 func TestDeleteSubscription(t *testing.T) {
 	h, sub, _ := setupHandler(t)
 
-	req := httptest.NewRequest(http.MethodDelete, "/subscriptions/"+sub.ID.String(), nil)
+	req := httptest.NewRequest(http.MethodDelete, "/subscriptions/"+sub.ID, nil)
 	w := httptest.NewRecorder()
 
 	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("id", sub.ID.String())
+	rctx.URLParams.Add("id", sub.ID)
 	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
 	req = req.WithContext(ctx)
 
@@ -167,7 +169,7 @@ func TestDeleteSubscription(t *testing.T) {
 		t.Fatalf("Expected 204 No Content, got %d", w.Code)
 	}
 
-	reqGet := httptest.NewRequest(http.MethodGet, "/subscriptions/"+sub.ID.String(), nil)
+	reqGet := httptest.NewRequest(http.MethodGet, "/subscriptions/"+sub.ID, nil)
 	wGet := httptest.NewRecorder()
 	reqGet = reqGet.WithContext(ctx)
 	h.GetByIDSubscription(wGet, reqGet)
@@ -190,7 +192,7 @@ func TestGetSubscriptionTotal(t *testing.T) {
 	}
 	repo.Create(sub2)
 
-	req := httptest.NewRequest(http.MethodGet, "/subscriptions/total?user_id="+sub.UserID.String()+"&from=2026-01-01&to=2026-01-31", nil)
+	req := httptest.NewRequest(http.MethodGet, "/subscriptions/total?user_id="+sub.UserID+"&from=2026-01-01&to=2026-01-31", nil)
 	w := httptest.NewRecorder()
 
 	h.GetSubscriptionTotal(w, req)

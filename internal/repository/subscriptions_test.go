@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"log"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -28,7 +29,7 @@ func createTestSubscription(t *testing.T) *model.Subscription {
 	sub := &model.Subscription{
 		ServiceName: "Test Service",
 		Price:       555,
-		UserID:      uuid.New(),
+		UserID:      uuid.New().String(),
 		StartDate:   "2026-01-01",
 		EndDate:     "2026-01-31",
 		CreatedAt:   time.Now(),
@@ -82,5 +83,68 @@ func TestDeleteSubscription(t *testing.T) {
 	check, _ := testRepo.GetByID(sub.ID)
 	if check != nil {
 		t.Errorf("Subscription was not deleted")
+	}
+}
+
+func TestListByUser(t *testing.T) {
+	userID := uuid.New().String()
+
+	for i := 0; i < 3; i++ {
+		sub := &model.Subscription{
+			ServiceName: "Service " + strconv.Itoa(i+1),
+			Price:       100 + i*10,
+			UserID:      userID,
+			StartDate:   "2026-01-01",
+			EndDate:     "2026-01-31",
+			CreatedAt:   time.Now(),
+		}
+		if err := testRepo.Create(sub); err != nil {
+			t.Fatalf("Failed to create subscription %d: %v", i, err)
+		}
+	}
+
+	subs, err := testRepo.ListByUser(userID)
+	if err != nil {
+		t.Fatalf("ListByUser failed: %v", err)
+	}
+
+	if len(subs) != 3 {
+		t.Errorf("Expected 3 subscriptions, got %d", len(subs))
+	}
+}
+
+func TestTotal(t *testing.T) {
+	userID := uuid.New().String()
+	serviceName := "ServiceTotalTest"
+
+	prices := []int{100, 200, 300}
+	for _, p := range prices {
+		sub := &model.Subscription{
+			ServiceName: serviceName,
+			Price:       p,
+			UserID:      userID,
+			StartDate:   "2026-01-01",
+			EndDate:     "2026-12-31",
+			CreatedAt:   time.Now(),
+		}
+		if err := testRepo.Create(sub); err != nil {
+			t.Fatalf("Failed to create subscription for total: %v", err)
+		}
+	}
+
+	from, _ := time.Parse("2006-01-02", "2026-01-01")
+	to, _ := time.Parse("2006-01-02", "2026-12-31")
+	total, err := testRepo.Total(&userID, &serviceName, from, to)
+	if err != nil {
+		t.Fatalf("Total calculation failed: %v", err)
+	}
+
+	expected := 0
+	for _, p := range prices {
+		expected += p
+	}
+
+	if total != expected {
+		t.Errorf("Expected total %d, got %d", expected, total)
 	}
 }
